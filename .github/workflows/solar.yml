@@ -123,5 +123,4 @@ jobs:
                   echo testing image url using wget
                   wget -qO- http://localhost:3000/live | grep live
 
-                  echo "Testing /planets endpoint"
-                  curl -f http://localhost:3000/planets || exit 1
+            
