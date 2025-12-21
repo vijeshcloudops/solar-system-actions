@@ -89,6 +89,9 @@ jobs:
     Containerization:
         name: Build Test and Push Images to docker and github registry
         runs-on: ubuntu-latest
+        permissions:
+            contents: read       ## Permission to read repository contents
+            packages: write        ## Permission to push to GitHub Container Registry
         needs: [unit-test, code-coverage]   ## Ensure tests and coverage complete before building image
         steps:
             - name: Checkout code
@@ -131,7 +134,7 @@ jobs:
                   wget -qO- http://localhost:3000/live | grep live
 
             - name: Push Container images to docker and github registry
-              uses: docker/build-push-action@v4
+              uses: docker/build-push-action@v4 
               with:
                   context: .              ## Build context is the current directory (path to Dockerfile)
                   push: true             ## Push the image to Docker Hub 
