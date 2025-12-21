@@ -14,6 +14,7 @@ env:
 
 jobs:
     unit-test:
+        name: Unit Tests on Node.js ${{ matrix.node-version }} and ${{ matrix.os }}
         strategy:
             matrix:
                 node-version: [19,20]                ## test against Node.js versions 19 and 20 
@@ -47,6 +48,7 @@ jobs:
 
 
     code-coverage:
+        name: Code Coverage and Reporting
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
