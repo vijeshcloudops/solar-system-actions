@@ -18,9 +18,9 @@ jobs:
         strategy:
             matrix:
                 node-version: [19,20]                ## test against Node.js versions 19 and 20 
-                os:  [ubuntu-latest, macos-latest]   ## run tests on both Ubuntu and MacOS
+                os:  [ubuntu-latest,ubuntu-20.04]   ## run tests on both Ubuntu and MacOS
                 exclude:
-                - os: macos-latest
+                - os: ubuntu-latest
                   node-version: 19
         runs-on: ${{ matrix.os }}
         steps:
@@ -31,6 +31,12 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: ${{ matrix.node-version }}
+
+            - name: Cache Dependencies        ##  Cache npm dependencies to speed up build
+              uses: actions/cache@v4
+              with:      
+                path: node_modules
+                key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json') }}    ## Cache key based on OS and package-lock.json
 
             - name: Install dependencies
               run: npm install
@@ -58,6 +64,12 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: 18
+
+            - name: Cache Dependencies        ##  Cache npm dependencies to speed up build
+              uses: actions/cache@v4
+              with:      
+                path: node_modules
+                key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json') }}    ## Cache key based on OS and package-lock.json
 
             - name: Install dependencies
               run: npm install
