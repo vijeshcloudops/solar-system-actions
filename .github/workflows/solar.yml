@@ -36,9 +36,10 @@ jobs:
 
             - name: Run unit tests
               run: npm test  
-              continue-on-error: true       ## Continue even if tests fail to allow artifact upload
+              ##continue-on-error: true       ## Continue even if tests fail to allow artifact upload
 
             - name: Upload test results
+              if: always()                      ## Ensure this step runs even if previous steps fail
               uses: actions/upload-artifact@v4
               with:
                   name: Unit-Test_results-${{ matrix.os }}-node-${{ matrix.node-version }}  ## Name of the artifact
@@ -60,10 +61,11 @@ jobs:
               run: npm install
 
             - name: Run tests with coverage
+              continue-on-error: true       ## Continue even if tests fail to allow coverage report upload
               run: npm run coverage
 
             - name: Upload coverage report
-              if: always()                      ## Ensure this step runs even if previous steps fail
+              ##if: always()                      ## Ensure this step runs even if previous steps fail
               uses: actions/upload-artifact@v4
               with:
                   name: coverage-report
