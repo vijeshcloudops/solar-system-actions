@@ -18,7 +18,7 @@ jobs:
         strategy:
             matrix:
                 node-version: [19,20]                ## test against Node.js versions 19 and 20 
-                os:  [ubuntu-latest,ubuntu-20.04]   ## run tests on both Ubuntu and MacOS
+                os:  [ubuntu-latest,ubuntu-22.04]   ## run tests on both Ubuntu and MacOS
                 exclude:
                 - os: ubuntu-latest
                   node-version: 19
