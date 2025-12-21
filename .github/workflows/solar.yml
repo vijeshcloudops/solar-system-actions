@@ -16,8 +16,8 @@ jobs:
     unit-test:
         strategy:
             matrix:
-                node-version: [19,20]
-                os:  [ubuntu-latest, macos-latest]
+                node-version: [19,20]                ## test against Node.js versions 19 and 20 
+                os:  [ubuntu-latest, macos-latest]   ## run tests on both Ubuntu and MacOS
                 exclude:
                 - os: macos-latest
                   node-version: 19
@@ -36,10 +36,34 @@ jobs:
 
             - name: Run unit tests
               run: npm test  
-              continue-on-error: true
+              continue-on-error: true       ## Continue even if tests fail to allow artifact upload
 
             - name: Upload test results
               uses: actions/upload-artifact@v4
               with:
-                  name: Unit-Test_results-${{ matrix.os }}-node-${{ matrix.node-version }}
+                  name: Unit-Test_results-${{ matrix.os }}-node-${{ matrix.node-version }}  ## Name of the artifact
                   path: test-results.xml
+
+
+    code-coverage:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js 18
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 18
+
+            - name: Install dependencies
+              run: npm install
+
+            - name: Run tests with coverage
+              run: npm run test:coverage
+
+            - name: Upload coverage report
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-report
+                  path: coverage/
