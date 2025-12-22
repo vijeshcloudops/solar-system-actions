@@ -1,0 +1,28 @@
+name: publish nodejs artifacts to ghcr
+
+on:
+    release:
+        types: [published]              # Trigger workflow on published releases
+
+jobs:
+    publish-node-artifact:
+        name: Publish Node.js Artifact to GitHub Container Registry
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js 20
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 20
+                  registry-url: 'https://npm.pkg.github.com'            # Set registry to GitHub Packages
+
+            - name: Install dependencies
+              run: npm install
+
+            - name: Publish package to GitHub Container Registry
+              run: npm publish
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
