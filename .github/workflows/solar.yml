@@ -22,6 +22,17 @@ jobs:
                 exclude:
                 - os: ubuntu-latest
                   node-version: 19
+        services:
+            mongo:
+                image: siddharth67/mongo-db:non-prod              ## Use MongoDB version 
+                ports:
+                    - 27017:27017
+        
+        env:                                                  ## Override global env vars for mongo service
+            MONGO_URI  : 'mongodb://localhost:27017/superData'
+            MONGO_USERNAME : non-prod-user                ## can use repo variables as well
+            MONGO_PASSWORD : non-prod-password            ## can use repo secrets as well
+              
         runs-on: ${{ matrix.os }}
         steps:
             - name: Checkout code
