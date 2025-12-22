@@ -8,6 +8,9 @@ jobs:
     publish-node-artifact:
         name: Publish Node.js Artifact to GitHub Container Registry
         runs-on: ubuntu-latest
+        permissions:
+            contents: read                   ## Permission to read repository contents
+            packages: write                  ## Permission to publish to GitHub Container Registry
 
         steps:
             - name: Checkout code
