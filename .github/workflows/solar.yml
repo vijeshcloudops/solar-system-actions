@@ -66,15 +66,29 @@ jobs:
 
     code-coverage:
         name: Code Coverage and Reporting
+        container: 
+            image: node:18                     ## Use Node.js 18 Docker image for consistency
+        
+        services:
+            mongo:
+                image: siddharth67/mongo-db:non-prod              ## Use MongoDB version 
+                options:
+                  --name mongo             ## Naming the container for easier reference
+        
+        env:                                                  ## Override global env vars for mongo service
+            MONGO_URI  : 'mongodb://mongo:27017/superData'  ## Note the hostname 'mongo' matches the service name
+            MONGO_USERNAME : non-prod-user                ## can use repo variables as well
+            MONGO_PASSWORD : non-prod-password            ## can use repo secrets as well
+
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
 
-            - name: Setup Node.js 18
-              uses: actions/setup-node@v3
-              with:
-                  node-version: 18
+            # - name: Setup Node.js 18                  ## Not needed as we are using a Node.js container
+            #   uses: actions/setup-node@v3
+            #   with:
+            #       node-version: 18
 
             - name: Cache Dependencies        ##  Cache npm dependencies to speed up build
               uses: actions/cache@v4
