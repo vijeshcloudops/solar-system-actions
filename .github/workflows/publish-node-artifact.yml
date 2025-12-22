@@ -2,7 +2,7 @@ name: publish nodejs artifacts to ghcr
 
 on:
     release:
-        types: [published]              # Trigger workflow on published releases
+        types: published             # Trigger workflow on published releases
 
 jobs:
     publish-node-artifact:
