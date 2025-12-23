@@ -223,4 +223,5 @@ jobs:
             - name: Deploy to Development Namespace
               run: |
                 kubectl apply -f kubernetes/development
-                
+                sleep 20s
+                kubectl -n ${{ vars.NAMESPACE }} get ingress
