@@ -182,7 +182,7 @@ jobs:
                 version: 'v1.26.0'   ## Specify kubectl version
 
             - name: Configure Kubeconfig
-              uses: azure/k8s-set-context@v4
+              uses: azure/k8s-set-context@v4 
               with:
                 method: kubeconfig
                 kubeconfig: ${{ secrets.KUBECONFIG }}
