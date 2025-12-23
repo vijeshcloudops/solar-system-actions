@@ -219,4 +219,8 @@ jobs:
             - name: Verify variables replacement in manifests 
               run: |
                 cat kubernetes/development/*.yaml
+
+            - name: Deploy to Development Namespace
+              run: |
+                kubectl apply -f kubernetes/development
                 
