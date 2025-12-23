@@ -22,6 +22,8 @@ jobs:
                 exclude:
                 - os: ubuntu-latest
                   node-version: 19
+                - os: ubuntu-22.04
+                  node-version: 19
         services:
             mongo:
                 image: siddharth67/mongo-db:non-prod              ## Use MongoDB version 
