@@ -8,7 +8,7 @@ metadata:
 spec:
   replicas: _{_REPLICAS_}_
   selector:
-    matchLabels:
+    matchLabels: 
       app: solar-system
   strategy: {}
   template:
