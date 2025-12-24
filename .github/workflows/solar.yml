@@ -169,10 +169,15 @@ jobs:
                     ${{ vars.DOCKER_HUB_USERNAME }}/solar-system-app:${{ github.sha }}   
                     ghcr.io/${{ github.repository_owner }}/solar-system-app:${{ github.sha }}  
 
-
-    Deploy:
-        name: Deploy to Kubernetes Cluster using kubectl
+    ### Deployment Jobs - Development and Production ###
+    dev-Deploy:
+        name: Deploy to development Kubernetes Cluster using kubectl
         runs-on: ubuntu-latest
+        environment:
+          name: development
+          url: https://${{ steps.app_url.outputs.APP_URL }}    ## Set environment URL to the application URL after deployment
+        outputs:
+            APP_URL: ${{ steps.app_url.outputs.APP_URL }}   ## Output the application URL after deployment
         needs: Containerization    ## Ensure containerization is done before deployment
         steps:
             - name: Checkout code
@@ -224,4 +229,114 @@ jobs:
               run: |
                 kubectl apply -f kubernetes/development
                 sleep 20s
-                kubectl -n ${{ vars.NAMESPACE }} get ingress
+                kubectl -n ${{ vars.NAMESPACE }} get 
+                
+            - name: Set Application URL         ## Get the application URL from ingress and set as output
+              id: app_url                       ## ID to reference this step
+              run: |
+                echo "APP_URL=$(kubectl -n ${{ vars.NAMESPACE }} get ingress -o jsonpath='{.items[0].spec.rules[0].host}')" >> "$GITHUB_OUTPUT"    
+
+    dev-Integration-Tests:
+        name: Integration Tests on Deployed Application
+        runs-on: ubuntu-latest
+        needs: dev-Deploy    ## Ensure deployment is done before integration tests
+        steps:
+            - name: Run Integration Tests
+              env:
+                URL: ${{ needs.dev-Deploy.outputs.APP_URL }}   ## Get the application URL from Deploy job output
+              run: |
+                echo "Running integration tests against https://$URL/live"
+                RESPONSE=$(curl -s https://$URL/live)
+                echo "Response: $RESPONSE"
+                if [[ "$RESPONSE" == *"live"* ]]; then
+                  echo "Integration Test Passed"
+                else
+                  echo "Integration Test Failed"
+                  exit 1
+                fi
+
+      
+    prod-Deploy:
+        name: Deploy to production Kubernetes Cluster using kubectl
+        runs-on: ubuntu-latest
+        environment:
+          name: production
+          url: https://${{ steps.app_url.outputs.APP_URL }}    ## Set environment URL to the application URL after deployment
+        outputs:
+            APP_URL: ${{ steps.app_url.outputs.APP_URL }}   ## Output the application URL after deployment
+        needs: dev-Integration-Tests    ## Ensure containerization is done before deployment
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Set up Kubectl
+              uses: azure/setup-kubectl@v4 
+              with:
+                version: 'v1.26.0'   ## Specify kubectl version
+
+            - name: Configure Kubeconfig
+              uses: azure/k8s-set-context@v4 
+              with:
+                method: kubeconfig
+                kubeconfig: ${{ secrets.KUBECONFIG }}
+
+            - name: Fetch Kubernetes Details
+              run: |
+                kubectl version --short
+                echo ----------------------
+                kubectl cluster-info
+                echo ======================
+                kubectl get nodes
+
+            - name: get Ingress IP
+              id: ingress_ip
+              run: |
+                INGRESS_IP=$(kubectl get svc ingress-nginx-controller   -n ingress-nginx   -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                echo "INGRESS_IP=$INGRESS_IP" >> $GITHUB_ENV 
+                echo "Ingress IP is $INGRESS_IP"
+
+            - name: Replace tokens in production manifests
+              uses: cschleiden/replace-tokens@v1
+              with:
+                tokenPrefix: '_{_'
+                tokenSuffix: '_}_'
+                files: '["kubernetes/production/*.yaml"]'
+              env:
+                NAMESPACE: ${{ vars.NAMESPACE }}
+                REPLICAS: ${{ vars.REPLICAS }}
+                IMAGE: ${{ vars.DOCKER_HUB_USERNAME }}/solar-system-app:${{ github.sha }}
+                INGRESS_IP: ${{ env.INGRESS_IP }}
+
+            - name: Verify variables replacement in manifests 
+              run: |
+                cat kubernetes/production/*.yaml
+
+            - name: Deploy to Production Namespace
+              run: |
+                kubectl apply -f kubernetes/production
+                sleep 20s
+                kubectl -n ${{ vars.NAMESPACE }} get 
+                
+            - name: Set Application URL         ## Get the application URL from ingress and set as output
+              id: app_url                       ## ID to reference this step
+              run: |
+                echo "APP_URL=$(kubectl -n ${{ vars.NAMESPACE }} get ingress -o jsonpath='{.items[0].spec.rules[0].host}')" >> "$GITHUB_OUTPUT"    
+
+    prod-Integration-Tests:
+        name: Integration Tests on Deployed Application
+        runs-on: ubuntu-latest
+        needs: prod-Deploy    ## Ensure deployment is done before integration tests
+        steps:
+            - name: Run Integration Tests
+              env:
+                URL: ${{ needs.prod-Deploy.outputs.APP_URL }}   ## Get the application URL from Deploy job output
+              run: |
+                echo "Running integration tests against https://$URL/live"
+                RESPONSE=$(curl -s https://$URL/live)
+                echo "Response: $RESPONSE"
+                if [[ "$RESPONSE" == *"live"* ]]; then
+                  echo "Integration Test Passed"
+                else
+                  echo "Integration Test Failed"
+                  exit 1
+                fi
