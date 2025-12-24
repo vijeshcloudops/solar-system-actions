@@ -229,7 +229,7 @@ jobs:
               run: |
                 kubectl apply -f kubernetes/development
                 sleep 20s
-                kubectl -n ${{ vars.NAMESPACE }} get 
+                kubectl -n ${{ vars.NAMESPACE }} get ingress
                 
             - name: Set Application URL         ## Get the application URL from ingress and set as output
               id: app_url                       ## ID to reference this step
@@ -315,7 +315,7 @@ jobs:
               run: |
                 kubectl apply -f kubernetes/production
                 sleep 20s
-                kubectl -n ${{ vars.NAMESPACE }} get 
+                kubectl -n ${{ vars.NAMESPACE }} get ingress
                 
             - name: Set Application URL         ## Get the application URL from ingress and set as output
               id: app_url                       ## ID to reference this step
