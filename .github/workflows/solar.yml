@@ -172,6 +172,7 @@ jobs:
     ### Deployment Jobs - Development and Production ###
     dev-Deploy:
         name: Deploy to development Kubernetes Cluster using kubectl
+        if: contains(github.ref,'feature/')
         runs-on: ubuntu-latest
         environment:
           name: development
@@ -238,6 +239,7 @@ jobs:
 
     dev-Integration-Tests:
         name: Integration Tests on Development Deployed Application
+        if: contains(github.ref,'feature/')
         runs-on: ubuntu-latest
         needs: dev-Deploy    ## Ensure deployment is done before integration tests
         steps:
@@ -258,13 +260,14 @@ jobs:
       
     prod-Deploy:
         name: Deploy to production Kubernetes Cluster using kubectl
+        if: github.ref == 'refs/heads/main'
         runs-on: ubuntu-latest
         environment:
           name: production
           url: https://${{ steps.app_url.outputs.APP_URL }}    ## Set environment URL to the application URL after deployment
         outputs:
             APP_URL: ${{ steps.app_url.outputs.APP_URL }}   ## Output the application URL after deployment
-        needs: dev-Integration-Tests    ## Ensure containerization is done before deployment
+        needs: Containerization    ## Ensure containerization is done before deployment
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
@@ -324,6 +327,7 @@ jobs:
 
     prod-Integration-Tests:
         name: Integration Tests on production Deployed Application
+        if: github.ref == 'refs/heads/main'
         runs-on: ubuntu-latest
         needs: prod-Deploy    ## Ensure deployment is done before integration tests
         steps:
