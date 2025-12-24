@@ -237,7 +237,7 @@ jobs:
                 echo "APP_URL=$(kubectl -n ${{ vars.NAMESPACE }} get ingress -o jsonpath='{.items[0].spec.rules[0].host}')" >> "$GITHUB_OUTPUT"    
 
     dev-Integration-Tests:
-        name: Integration Tests on Deployed Application
+        name: Integration Tests on Development Deployed Application
         runs-on: ubuntu-latest
         needs: dev-Deploy    ## Ensure deployment is done before integration tests
         steps:
@@ -323,7 +323,7 @@ jobs:
                 echo "APP_URL=$(kubectl -n ${{ vars.NAMESPACE }} get ingress -o jsonpath='{.items[0].spec.rules[0].host}')" >> "$GITHUB_OUTPUT"    
 
     prod-Integration-Tests:
-        name: Integration Tests on Deployed Application
+        name: Integration Tests on production Deployed Application
         runs-on: ubuntu-latest
         needs: prod-Deploy    ## Ensure deployment is done before integration tests
         steps:
