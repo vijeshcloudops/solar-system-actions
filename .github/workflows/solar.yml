@@ -246,7 +246,7 @@ jobs:
                 URL: ${{ needs.dev-Deploy.outputs.APP_URL }}   ## Get the application URL from Deploy job output
               run: |
                 echo "Running integration tests against https://$URL/live"
-                RESPONSE=$(curl -s https://$URL/live)
+                RESPONSE=$(curl -s https://$URL/live -k | jq -r .status)
                 echo "Response: $RESPONSE"
                 if [[ "$RESPONSE" == *"live"* ]]; then
                   echo "Integration Test Passed"
@@ -332,7 +332,7 @@ jobs:
                 URL: ${{ needs.prod-Deploy.outputs.APP_URL }}   ## Get the application URL from Deploy job output
               run: |
                 echo "Running integration tests against https://$URL/live"
-                RESPONSE=$(curl -s https://$URL/live)
+                RESPONSE=$(curl -s https://$URL/live -k | jq -r .status)
                 echo "Response: $RESPONSE"
                 if [[ "$RESPONSE" == *"live"* ]]; then
                   echo "Integration Test Passed"
