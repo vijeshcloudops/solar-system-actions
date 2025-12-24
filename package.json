@@ -1,5 +1,5 @@
 {
-  "name": "Solar System",
+  "name": "@vijeshcloudops/Solar System",
   "version": "6.7.6",
   "author": "Vijesh Vijayan",
   "homepage": "https://www.linkedin.com/in/vjcloudops/",
@@ -11,7 +11,7 @@
   },
   "nyc": {
     "check-coverage": true,
-    "lines": 70
+    "lines": 80
   },
   "dependencies": {
     "@babel/traverse": "^7.23.2",
@@ -19,6 +19,7 @@
     "express": "^4.18.2",
     "mocha-junit-reporter": "^2.2.1",
     "mongoose": "^8.13.2",
+    "nodemon": "^3.1.11",
     "nyc": "^15.1.0",
     "serverless-http": "^3.2.0"
   },
