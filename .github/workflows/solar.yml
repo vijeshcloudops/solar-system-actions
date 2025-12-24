@@ -226,6 +226,10 @@ jobs:
               run: |
                 cat kubernetes/development/*.yaml
 
+            - name: Create development namespace if not exists
+              run: |
+                kubectl get namespace ${{ vars.NAMESPACE }} || kubectl create namespace ${{ vars.NAMESPACE }}
+
             - name: Deploy to Development Namespace
               run: |
                 kubectl apply -f kubernetes/development
@@ -313,6 +317,10 @@ jobs:
             - name: Verify variables replacement in manifests 
               run: |
                 cat kubernetes/production/*.yaml
+
+            - name: Create production namespace if not exists
+              run: |
+                kubectl get namespace ${{ vars.NAMESPACE }} || kubectl create namespace ${{ vars.NAMESPACE }}
 
             - name: Deploy to Production Namespace
               run: |
