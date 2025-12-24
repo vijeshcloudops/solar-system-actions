@@ -197,7 +197,7 @@ jobs:
             - name: Fetch Kubernetes Details
               run: |
                 kubectl version --short
-                echo ----------------------
+                echo ---------------------- 
                 kubectl cluster-info
                 echo ======================
                 kubectl get nodes
