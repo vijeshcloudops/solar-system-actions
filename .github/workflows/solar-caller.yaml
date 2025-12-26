@@ -1,0 +1,290 @@
+# name: solar-system-cicd
+
+# on:
+#     workflow_dispatch:
+#     push:
+#         branches:
+#             - main
+#             - "feature/*"
+
+# env:
+#     MONGO_URI: "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
+#     MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
+#     MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+
+# jobs:
+#     unit-test:
+#         name: Unit Tests on Node.js ${{ matrix.node-version }} and ${{ matrix.os }}
+#         strategy:
+#             matrix:
+#                 node-version: [19, 20] ## test against Node.js versions 19 and 20
+#                 os: [ubuntu-latest, ubuntu-22.04] ## run tests on both Ubuntu and MacOS
+#                 exclude:
+#                     - os: ubuntu-latest
+#                       node-version: 19
+#                     - os: ubuntu-22.04
+#                       node-version: 19
+#         services:
+#             mongo:
+#                 image: siddharth67/mongo-db:non-prod ## Use MongoDB version
+#                 ports:
+#                     - 27017:27017
+
+#         env: ## Override global env vars for mongo service
+#             MONGO_URI: "mongodb://localhost:27017/superData"
+#             MONGO_USERNAME: non-prod-user ## can use repo variables as well
+#             MONGO_PASSWORD: non-prod-password ## can use repo secrets as well
+
+#         runs-on: ${{ matrix.os }}
+#         steps:
+#             - name: Checkout code
+#               uses: actions/checkout@v3
+
+#             - name: Setup Node.js ${{ matrix.node-version }}
+#               uses: actions/setup-node@v3
+#               with:
+#                   node-version: ${{ matrix.node-version }}
+
+#             - name: Cache Dependencies ##  Cache npm dependencies to speed up build
+#               uses: actions/cache@v4
+#               with:
+#                   path: node_modules
+#                   key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json') }} ## Cache key based on OS and package-lock.json
+
+#             - name: Install dependencies
+#               run: npm install
+
+#             - name: Run unit tests
+#               run: npm test
+#               ##continue-on-error: true       ## Continue even if tests fail to allow artifact upload
+
+#             - name: Upload test results
+#               if: always() ## Ensure this step runs even if previous steps fail
+#               uses: actions/upload-artifact@v4
+#               with:
+#                   name: Unit-Test_results-${{ matrix.os }}-node-${{ matrix.node-version }} ## Name of the artifact
+#                   path: test-results.xml
+
+#     code-coverage:
+#         name: Code Coverage and Reporting
+#         container:
+#             image: node:18 ## Use Node.js 18 Docker image for consistency
+
+#         services:
+#             mongo:
+#                 image: siddharth67/mongo-db:non-prod ## Use MongoDB version
+#                 options: --name mongo ## Naming the container for easier reference
+
+#         env: ## Override global env vars for mongo service
+#             MONGO_URI: "mongodb://mongo:27017/superData" ## Note the hostname 'mongo' matches the service name
+#             MONGO_USERNAME: non-prod-user ## can use repo variables as well
+#             MONGO_PASSWORD: non-prod-password ## can use repo secrets as well
+
+#         runs-on: ubuntu-latest
+#         steps:
+#             - name: Checkout code
+#               uses: actions/checkout@v3
+
+#             # - name: Setup Node.js 18                  ## Not needed as we are using a Node.js container
+#             #   uses: actions/setup-node@v3
+#             #   with:
+#             #       node-version: 18
+
+#             - name: Cache Dependencies ##  Cache npm dependencies to speed up build
+#               uses: actions/cache@v4
+#               with:
+#                   path: node_modules
+#                   key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json') }} ## Cache key based on OS and package-lock.json
+
+#             - name: Install dependencies
+#               run: npm install
+
+#             - name: Run tests with coverage
+#               continue-on-error: true ## Continue even if tests fail to allow coverage report upload
+#               run: npm run coverage
+
+#             - name: Upload coverage report
+#               ##if: always()                      ## Ensure this step runs even if previous steps fail
+#               uses: actions/upload-artifact@v4
+#               with:
+#                   name: coverage-report
+#                   path: coverage/
+#                   retention-days: 5 ## Keep the report for 5 days default is 90 days
+
+#     Containerization:
+#         name: Build Test and Push Images to docker and github registry
+#         runs-on: ubuntu-latest
+#         permissions:
+#             contents: read ## Permission to read repository contents
+#             packages: write ## Permission to push to GitHub Container Registry
+#         needs: [unit-test, code-coverage] ## Ensure tests and coverage complete before building image
+#         steps:
+#             - name: Checkout code
+#               uses: actions/checkout@v3
+
+#             - name: Log in to Docker Hub
+#               uses: docker/login-action@v3
+#               with:
+#                   username: ${{ vars.DOCKER_HUB_USERNAME }} ## Docker Hub username stored in GitHub repository Variables
+#                   password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }} ## Docker Hub access token stored in GitHub repository Secrets
+
+#             - name: Log in to GHCR
+#               uses: docker/login-action@v3
+#               with:
+#                   registry: ghcr.io ## GitHub Container Registry
+#                   username: ${{ github.repository_owner }} ## GitHub username - predefined context variable
+#                   password: ${{ secrets.GITHUB_TOKEN }} ## GitHub token for authentication - created automatically by GitHub
+
+#             - name: Build Docker image
+#               uses: docker/build-push-action@v4
+#               with:
+#                   context: . ## Build context is the current directory (path to Dockerfile)
+#                   push: false ## Do not push yet
+#                   tags: ${{ vars.DOCKER_HUB_USERNAME }}/solar-system-app:${{ github.sha }} ## Tag image with commit SHA
+
+#             - name: Test the Docker Image
+#               run: |
+#                   docker images
+#                   docker run -d -p 3000:3000 --name solar-test \
+#                   -e MONGO_URI='${{ env.MONGO_URI }}' \
+#                   -e MONGO_USERNAME='${{ vars.MONGO_USERNAME }}' \
+#                   -e MONGO_PASSWORD='${{ secrets.MONGO_PASSWORD }}' \
+#                   ${{ vars.DOCKER_HUB_USERNAME }}/solar-system-app:${{ github.sha }}
+
+#                   sleep 10   ## Wait for container to start
+
+#                   export IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' solar-test)
+#                   echo "Container IP: $IP"
+#                   echo testing image url using wget
+#                   wget -qO- http://localhost:3000/live | grep live
+
+#             - name: Push Container images to docker and github registry
+#               uses: docker/build-push-action@v4
+#               with:
+#                   context: . ## Build context is the current directory (path to Dockerfile)
+#                   push: true ## Push the image to Docker Hub
+#                   tags: |
+#                       ${{ vars.DOCKER_HUB_USERNAME }}/solar-system-app:${{ github.sha }}
+#                       ghcr.io/${{ github.repository_owner }}/solar-system-app:${{ github.sha }}
+
+#     ### Deployment Jobs - Development and Production ###
+#     dev-Deploy:
+#         name: Deploy to development Kubernetes Cluster using kubectl
+#         if: contains(github.ref,'feature/')
+#         needs: Containerization ## Ensure containerization is done before deployment
+#         uses: ./.github/workflows/reusable.yaml
+#         secrets:
+#             KUBECONFIG: ${{ secrets.KUBECONFIG }}
+#         with:
+#             environment:
+
+#     dev-Integration-Tests:
+#         name: Integration Tests on Development Deployed Application
+#         if: contains(github.ref,'feature/')
+#         runs-on: ubuntu-latest
+#         needs: dev-Deploy ## Ensure deployment is done before integration tests
+#         steps:
+#             - name: Run Integration Tests
+#               env:
+#                   URL: ${{ needs.dev-Deploy.outputs.APP_URL }} ## Get the application URL from Deploy job output
+#               run: |
+#                   echo "Running integration tests against https://$URL/live"
+#                   RESPONSE=$(curl -s https://$URL/live -k | jq -r .status)
+#                   echo "Response: $RESPONSE"
+#                   if [[ "$RESPONSE" == *"live"* ]]; then
+#                     echo "Integration Test Passed"
+#                   else
+#                     echo "Integration Test Failed"
+#                     exit 1
+#                   fi
+
+#     prod-Deploy:
+#         name: Deploy to production Kubernetes Cluster using kubectl
+#         if: github.ref == 'refs/heads/main'
+#         runs-on: ubuntu-latest
+#         environment:
+#             name: production
+#             url: https://${{ steps.app_url.outputs.APP_URL }} ## Set environment URL to the application URL after deployment
+#         outputs:
+#             APP_URL: ${{ steps.app_url.outputs.APP_URL }} ## Output the application URL after deployment
+#         needs: Containerization ## Ensure containerization is done before deployment
+#         steps:
+#             - name: Checkout code
+#               uses: actions/checkout@v3
+
+#             - name: Set up Kubectl
+#               uses: azure/setup-kubectl@v4
+#               with:
+#                   version: "v1.26.0" ## Specify kubectl version
+
+#             - name: Configure Kubeconfig
+#               uses: azure/k8s-set-context@v4
+#               with:
+#                   method: kubeconfig
+#                   kubeconfig: ${{ secrets.KUBECONFIG }}
+
+#             - name: Fetch Kubernetes Details
+#               run: |
+#                   kubectl version --short
+#                   echo ----------------------
+#                   kubectl cluster-info
+#                   echo ======================
+#                   kubectl get nodes
+
+#             - name: get Ingress IP
+#               id: ingress_ip
+#               run: |
+#                   INGRESS_IP=$(kubectl get svc ingress-nginx-controller   -n ingress-nginx   -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+#                   echo "INGRESS_IP=$INGRESS_IP" >> $GITHUB_ENV
+#                   echo "Ingress IP is $INGRESS_IP"
+
+#             - name: Replace tokens in production manifests
+#               uses: cschleiden/replace-tokens@v1
+#               with:
+#                   tokenPrefix: "_{_"
+#                   tokenSuffix: "_}_"
+#                   files: '["kubernetes/production/*.yaml"]'
+#               env:
+#                   NAMESPACE: ${{ vars.NAMESPACE }}
+#                   REPLICAS: ${{ vars.REPLICAS }}
+#                   IMAGE: ${{ vars.DOCKER_HUB_USERNAME }}/solar-system-app:${{ github.sha }}
+#                   INGRESS_IP: ${{ env.INGRESS_IP }}
+
+#             - name: Verify variables replacement in manifests
+#               run: |
+#                   cat kubernetes/production/*.yaml
+
+#             - name: Create production namespace if not exists
+#               run: |
+#                   kubectl get namespace ${{ vars.NAMESPACE }} || kubectl create namespace ${{ vars.NAMESPACE }}
+
+#             - name: Deploy to Production Namespace
+#               run: |
+#                   kubectl apply -f kubernetes/production
+#                   sleep 20s
+#                   kubectl -n ${{ vars.NAMESPACE }} get ingress
+
+#             - name: Set Application URL ## Get the application URL from ingress and set as output
+#               id: app_url ## ID to reference this step
+#               run: |
+#                   echo "APP_URL=$(kubectl -n ${{ vars.NAMESPACE }} get ingress -o jsonpath='{.items[0].spec.rules[0].host}')" >> "$GITHUB_OUTPUT"
+
+#     prod-Integration-Tests:
+#         name: Integration Tests on production Deployed Application
+#         if: github.ref == 'refs/heads/main'
+#         runs-on: ubuntu-latest
+#         needs: prod-Deploy ## Ensure deployment is done before integration tests
+#         steps:
+#             - name: Run Integration Tests
+#               env:
+#                   URL: ${{ needs.prod-Deploy.outputs.APP_URL }} ## Get the application URL from Deploy job output
+#               run: |
+#                   echo "Running integration tests against https://$URL/live"
+#                   RESPONSE=$(curl -s https://$URL/live -k | jq -r .status)
+#                   echo "Response: $RESPONSE"
+#                   if [[ "$RESPONSE" == *"live"* ]]; then
+#                     echo "Integration Test Passed"
+#                   else
+#                     echo "Integration Test Failed"
+#                     exit 1
+#                   fi
