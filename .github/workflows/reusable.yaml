@@ -2,12 +2,12 @@ name: Reusable Workflow
 
 on:
     workflow_call:
-        secrets:
+        secrets: ## Define secrets for the reusable workflow
             KUBECONFIG:
                 required: true
             MONGO_PASSWORD:
                 required: true
-        inputs:
+        inputs: ## Define inputs for the reusable workflow
             environment:
                 description: "The target environment for deployment"
                 required: true
@@ -21,6 +21,10 @@ on:
                 description: "Path to Kubernetes manifests"
                 required: true
                 type: string
+        outputs: ## Define outputs for the reusable workflow
+            APP_URL:
+                description: "The URL of the deployed application"
+                value: ${{ jobs.reuse-deploy.outputs.APP_URL }}
 
 jobs:
     reuse-deploy:
