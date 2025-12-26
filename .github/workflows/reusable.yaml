@@ -1,0 +1,92 @@
+name: Reusable Workflow
+
+on:
+    workflow_call:
+        secrets:
+            KUBECONFIG:
+                required: true
+        inputs:
+            environment:
+                description: "The target environment for deployment"
+                required: true
+                type: string
+            k8s-version:
+                description: "Kubernetes version to use"
+                required: false
+                type: string
+                default: "v1.26.0"
+            manifests-path:
+                description: "Path to Kubernetes manifests"
+                required: true
+                type: string
+
+jobs:
+    reuse-deploy:
+        name: Reusable Job
+        runs-on: ubuntu-latest
+        environment:
+            name: ${{ inputs.environment }} ## Set environment name from input
+            url: https://${{ steps.app_url.outputs.APP_URL }} ## Set environment URL to the application URL after deployment
+        outputs:
+            APP_URL: ${{ steps.app_url.outputs.APP_URL }} ## Output the application URL after deployment
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Set up Kubectl
+              uses: azure/setup-kubectl@v4
+              with:
+                  version: ${{ inputs.k8s-version }} ## Specify kubectl version
+
+            - name: Configure Kubeconfig
+              uses: azure/k8s-set-context@v4
+              with:
+                  method: kubeconfig
+                  kubeconfig: ${{ secrets.KUBECONFIG }}
+
+            - name: Fetch Kubernetes Details
+              run: |
+                  kubectl version --short
+                  echo ---------------------- 
+                  kubectl cluster-info
+                  echo ======================
+                  kubectl get nodes
+
+            - name: get Ingress IP
+              id: ingress_ip
+              run: |
+                  INGRESS_IP=$(kubectl get svc ingress-nginx-controller   -n ingress-nginx   -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                  echo "INGRESS_IP=$INGRESS_IP" >> $GITHUB_ENV 
+                  echo "Ingress IP is $INGRESS_IP"
+
+            - name: Replace tokens in development manifests
+              uses: cschleiden/replace-tokens@v1
+              with:
+                  tokenPrefix: "_{_"
+                  tokenSuffix: "_}_"
+                  files: '["${{ inputs.manifests-path }}/*.yaml"]'
+              env:
+                  NAMESPACE: ${{ vars.NAMESPACE }}
+                  REPLICAS: ${{ vars.REPLICAS }}
+                  IMAGE: ${{ vars.DOCKER_HUB_USERNAME }}/solar-system-app:${{ github.sha }}
+                  INGRESS_IP: ${{ env.INGRESS_IP }}
+
+            - name: Verify variables replacement in manifests
+              run: |
+                  cat ${{ inputs.manifests-path }}/*.yaml
+
+            - name: Create development namespace if not exists
+              run: |
+                  kubectl get namespace ${{ vars.NAMESPACE }} || kubectl create namespace ${{ vars.NAMESPACE }}
+
+            - name: Deploy to Development Namespace
+              run: |
+                  kubectl apply -f ${{ inputs.manifests-path }} 
+                  sleep 20s
+                  kubectl -n ${{ vars.NAMESPACE }} get ingress
+
+            - name: Set Application URL ## Get the application URL from ingress and set as output
+              id: app_url ## ID to reference this step
+              run: |
+                  echo "APP_URL=$(kubectl -n ${{ vars.NAMESPACE }} get ingress -o jsonpath='{.items[0].spec.rules[0].host}')" >> "$GITHUB_OUTPUT"
