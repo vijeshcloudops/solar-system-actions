@@ -2,10 +2,12 @@ name: Reusable Workflow
 
 on:
     workflow_call:
-        secrets:
+        secrets: ## Define secrets for the reusable workflow
             KUBECONFIG:
                 required: true
-        inputs:
+            MONGO_PASSWORD:
+                required: true
+        inputs: ## Define inputs for the reusable workflow
             environment:
                 description: "The target environment for deployment"
                 required: true
@@ -19,6 +21,10 @@ on:
                 description: "Path to Kubernetes manifests"
                 required: true
                 type: string
+        outputs: ## Define outputs for the reusable workflow
+            APP_URL:
+                description: "The URL of the deployed application"
+                value: ${{ jobs.reuse-deploy.outputs.APP_URL }}
 
 jobs:
     reuse-deploy:
@@ -71,6 +77,9 @@ jobs:
                   REPLICAS: ${{ vars.REPLICAS }}
                   IMAGE: ${{ vars.DOCKER_HUB_USERNAME }}/solar-system-app:${{ github.sha }}
                   INGRESS_IP: ${{ env.INGRESS_IP }}
+                  MONGO_URI: ${{ vars.MONGO_URI }}
+                  MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
+                  MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
 
             - name: Verify variables replacement in manifests
               run: |
