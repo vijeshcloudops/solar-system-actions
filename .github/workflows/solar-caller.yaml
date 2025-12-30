@@ -62,7 +62,7 @@ jobs:
         if: always() ## Ensure this step runs even if previous steps fail
         uses: actions/upload-artifact@v4
         with:
-          name: Unit-Test_results-${{ matrix.os }}-node-${{ matrix.node-version }} ## Name of the artifact
+          name: Mocha-Test_results ## ## Name of the artifact
           path: test-results.xml
 
   code-coverage:
@@ -113,22 +113,13 @@ jobs:
 
   reports-s3:
     name: Upload Test and Coverage Reports to S3
-    strategy:
-      matrix:
-        node-version: [19, 20] ## test against Node.js versions 19 and 20
-        os: [ubuntu-latest, ubuntu-22.04] ## run tests on both Ubuntu and MacOS
-        exclude:
-          - os: ubuntu-latest
-            node-version: 19
-          - os: ubuntu-22.04
-            node-version: 19
     runs-on: ubuntu-latest
     needs: [unit-test, code-coverage] ## Ensure tests and coverage complete before uploading reports
     steps:
       - name: Download Unit Test Results Artifact
         uses: actions/download-artifact@v4
         with:
-          name: Unit-Test_results-${{ matrix.os }}-node-${{ matrix.node-version }} ## Download artifact from unit-test job
+          name: Mocha-Test_results ## Download artifact from unit-test job
 
       - name: Download Coverage Report Artifact
         uses: actions/download-artifact@v4
