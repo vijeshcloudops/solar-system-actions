@@ -135,17 +135,27 @@ jobs:
           mv cobertura-coverage.xml combined-reports-${{ github.sha }}/
           ls -R combined-reports-${{ github.sha }}
 
-      - name: Upload reports to S3
-        uses: jakejarvis/s3-sync-action@master
-        with:
-          args: --follow-symlinks --delete
+      - name: Upload reports to S3 ## Upload merged reports to AWS S3 bucket using CLI (recommended)
+        run: |
+          aws s3 sync combined-reports-${{ github.sha }} \
+            s3://${{ vars.AWS_S3_BUCKET }}/reports/combined-reports-${{ github.sha }} \
+            --no-progress
         env:
-          AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: "us-west-1" # optional: defaults to us-east-1
-          SOURCE_DIR: "combined-reports-${{ github.sha }}" # optional: defaults to entire repository
-          DEST_DIR: "reports/combined-reports-${{ github.sha }}" # optional: defaults to root of bucket
+          AWS_REGION: us-east-1
+
+      # - name: Upload reports to S3  ## Alternative: Upload merged reports to AWS S3 bucket using action
+      #   uses: jakejarvis/s3-sync-action@master
+      #   with:
+      #     args: --follow-symlinks --delete
+      #   env:
+      #     AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
+      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     AWS_REGION: "us-west-1" # optional: defaults to us-east-1
+      #     SOURCE_DIR: "combined-reports-${{ github.sha }}" # optional: defaults to entire repository
+      #     DEST_DIR: "reports/combined-reports-${{ github.sha }}" # optional: defaults to root of bucket
 
   Containerization:
     name: Build Test and Push Images to docker and github registry
