@@ -132,7 +132,7 @@ jobs:
         run: |
           mkdir combined-reports-${{ github.sha }}
           mv test-results.xml combined-reports-${{ github.sha }}/
-          mv coverage combined-reports-${{ github.sha }}/coverage
+          mv cobertura-coverage.xml combined-reports-${{ github.sha }}/
           ls -R combined-reports-${{ github.sha }}
 
   Containerization:
